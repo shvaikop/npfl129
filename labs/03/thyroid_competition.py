@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# e97917d7-2509-11ec-986f-f39926f24a9c
+# aecaa3bb-2101-11ec-986f-f39926f24a9c
+# d989c517-2472-11ec-986f-f39926f24a9c
+
 import argparse
 import lzma
 import os
@@ -9,6 +13,11 @@ import urllib.request
 
 import numpy as np
 import numpy.typing as npt
+
+import sklearn.compose
+import sklearn.model_selection
+import sklearn.pipeline
+from sklearn.linear_model import LogisticRegression
 
 parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
@@ -50,8 +59,35 @@ def main(args: argparse.Namespace) -> Optional[npt.ArrayLike]:
         np.random.seed(args.seed)
         train = Dataset()
 
+        binary_columns = list(range(15))
+        numerical_columns = list(range(15, 21))
+
+        # data_train, data_test, target_train, target_test = \
+        #     sklearn.model_selection.train_test_split(train.data,
+        #                                              train.target,
+        #                                              test_size=0.1,
+        #                                              random_state=args.seed)
+        
+        column_transformer = sklearn.compose.ColumnTransformer([
+            ("binary", sklearn.preprocessing.OneHotEncoder(categories="auto", sparse=False), binary_columns),
+            ("numerical", sklearn.preprocessing.StandardScaler(), numerical_columns)
+        ])
+
+        model = sklearn.pipeline.Pipeline([
+            ("preprocessing", column_transformer),
+            ("poly_features", sklearn.preprocessing.PolynomialFeatures(degree=3, include_bias=False)),
+            ("classifier", sklearn.linear_model.LogisticRegression())
+        ])
+
         # TODO: Train a model on the given dataset and store it in `model`.
-        model = ...
+        # model.fit(data_train, target_train)
+        # predictions = model.predict(data_test)
+        # print(sklearn.metrics.accuracy_score(target_test, predictions))
+
+        model.fit(train.data, train.target)
+
+
+        # model.fit()
 
         # Serialize the model.
         with lzma.open(args.model_path, "wb") as model_file:
@@ -65,7 +101,7 @@ def main(args: argparse.Namespace) -> Optional[npt.ArrayLike]:
             model = pickle.load(model_file)
 
         # TODO: Generate `predictions` with the test set predictions.
-        predictions = ...
+        predictions = model.predict(test.data)
 
         return predictions
 
